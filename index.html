@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zomato - Ultimate Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Lexend', 'sans-serif'],
+                    },
+                    colors: {
+                        zomato: {
+                            red: '#E23744',
+                            dark: '#0f0f0f', // Deeper black for OLED feel
+                            card: '#18181b',
+                            gold: '#FFD700',
+                            accent: '#2361f7'
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'shine': 'shine 2s linear infinite',
+                        'slide-up-spring': 'slideUpSpring 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'pulse-glow': 'pulseGlow 2s infinite',
+                        'bounce-slow': 'bounce 3s infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        },
+                        shine: {
+                            '0%': { backgroundPosition: '200% center' },
+                            '100%': { backgroundPosition: '-200% center' }
+                        },
+                        slideUpSpring: {
+                            '0%': { transform: 'translateY(100%)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { boxShadow: '0 0 0 0 rgba(226, 55, 68, 0.4)' },
+                            '50%': { boxShadow: '0 0 20px 0 rgba(226, 55, 68, 0.7)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Advanced CSS Reset & Utilities */
+        body { 
+            font-family: 'Lexend', sans-serif; 
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Glassmorphism v2 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .glass-panel {
+            background: rgba(24, 24, 27, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Mesh Gradient Background */
+        .mesh-bg {
+            background-color: #000000;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(356,96%,55%,0.2) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(225,96%,55%,0.2) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, hsla(268,96%,55%,0.2) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, hsla(38,96%,55%,0.1) 0px, transparent 50%);
+        }
+
+        /* 3D Tilt Effect CSS (Controlled by JS) */
+        .tilt-card {
+            transform-style: preserve-3d;
+            transform: perspective(1000px);
+        }
+        .tilt-content {
+            transform: translateZ(20px);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #E23744; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        
+        /* Typing Cursor */
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s step-start infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Image Loader */
+        .img-loading { filter: blur(10px); transform: scale(1.05); }
+        .img-loaded { filter: blur(0); transform: scale(1); transition: all 0.5s ease-out; }
+
+        /* Logic Specific Styling */
+        .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; transform: translateY(0); }
+        .tooltip-text { visibility: hidden; opacity: 0; transform: translateY(10px); transition: all 0.3s ease; }
+        
+        .must-try-glow { 
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); 
+            border: 1px solid rgba(255, 215, 0, 0.4); 
+        }
+        
+        /* Busy/Disabled State */
+        .restaurant-busy-overlay {
+            background-color: rgba(0,0,0,0.05);
+            filter: grayscale(100%);
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        /* Gold Gradient Text */
+        .text-gold-gradient {
+            background: linear-gradient(to right, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-zomato-dark dark:text-gray-100 transition-colors duration-500 pb-24 selection:bg-zomato-red selection:text-white">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-24 right-5 transform translate-y-20 opacity-0 transition-all duration-500 z-[100] glass-panel text-gray-900 dark:text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border-l-4 border-zomato-red">
+        <div class="bg-zomato-red/10 p-2 rounded-full"><i data-lucide="sparkles" class="w-5 h-5 text-zomato-red"></i></div>
+        <div>
+            <h4 class="font-bold text-sm">Update</h4>
+            <span id="toast-message" class="text-sm opacity-80">Notification</span>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 py-4 px-4 lg:px-8 border-b border-transparent">
+        <div class="container mx-auto flex justify-between items-center">
+            <!-- Logo Area -->
+            <div class="flex items-center gap-6">
+                <div class="relative group cursor-pointer" onclick="render()">
+                      <img src="https://b.zmtcdn.com/web_assets/8313a97515fcb0447d2d77c276532a511583262271.png" alt="Zomato" class="h-8 w-auto hidden dark:block transition-transform group-hover:scale-105">
+                      <img src="https://b.zmtcdn.com/web_assets/b40b97e677bc7b2ca77c58c61db266fe1603954218.png" alt="Zomato" class="h-8 w-auto block dark:hidden transition-transform group-hover:scale-105">
+                </div>
+                
+                <!-- NEW: ML Indicator -->
+                <div class="hidden md:flex items-center text-[10px] font-mono text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-white/10 rounded px-2 py-1 bg-white/50 dark:bg-black/20">
+                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span> ML Engine Active
+                </div>
+            </div>
+
+            <!-- Smart Search (Desktop) -->
+            <div id="nav-search" class="hidden lg:flex flex-1 max-w-xl mx-8 opacity-0 transition-all duration-500 transform translate-y-[-10px]">
+                <div class="relative w-full group">
+                    <i data-lucide="search" class="absolute left-4 top-3 text-gray-400 w-5 h-5 group-focus-within:text-zomato-red transition-colors"></i>
+                    <input type="text" placeholder="Search for restaurant, cuisine or a dish" class="w-full bg-gray-100 dark:bg-white/5 rounded-xl py-2.5 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-zomato-red/50 border border-transparent transition-all">
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-3 md:gap-6">
+                <button id="theme-toggle" class="p-2.5 rounded-full bg-gray-200/50 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 transition-all active:scale-90">
+                    <i data-lucide="sun" class="w-5 h-5 hidden dark:block text-yellow-400"></i>
+                    <i data-lucide="moon" class="w-5 h-5 block dark:hidden text-gray-600"></i>
+                </button>
+                <div class="relative cursor-pointer p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors" onclick="openCartModal()">
+                    <i data-lucide="shopping-bag" class="w-6 h-6 text-gray-700 dark:text-gray-200"></i>
+                    <div id="nav-cart-badge" class="absolute top-0 right-0 bg-zomato-red text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center transform scale-0 transition-transform duration-300">0</div>
+                </div>
+                
+                <!-- AUTH BUTTONS (Default Visible) -->
+                <div id="auth-buttons" class="hidden sm:flex items-center gap-4">
+                    <button onclick="openLoginModal()" class="text-sm font-medium hover:text-zomato-red transition-colors">Log in</button>
+                    <button onclick="openSignupFlow()" class="text-sm font-medium bg-zomato-red text-white px-4 py-2 rounded-full hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all hover:-translate-y-0.5">Sign up</button>
+                </div>
+
+                <!-- MEMBERSHIP BUTTON (Hidden by default, shown after login) -->
+                <button id="nav-btn-membership" onclick="openSignupFlow()" class="hidden text-sm font-bold text-zomato-gold hover:text-yellow-500 transition-colors flex-shrink-0 items-center gap-1 border border-zomato-gold/30 px-3 py-1 rounded-full bg-zomato-gold/5">
+                    <i data-lucide="crown" class="w-4 h-4"></i> Membership
+                </button>
+
+                <!-- USER PROFILE & MEMBERSHIP (Default Hidden) -->
+                <div id="user-profile" class="hidden flex items-center gap-3 cursor-pointer group relative">
+                    
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-zomato-red to-pink-600 text-white font-black flex items-center justify-center text-lg shadow-lg transform group-hover:scale-105 transition-transform relative overflow-hidden" id="user-avatar">
+                        U
+                        <div id="avatar-shine" class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 translate-x-[-100%]"></div>
+                    </div>
+                    <!-- Dropdown -->
+                    <div class="hidden group-hover:block absolute top-full right-0 mt-2 w-56 bg-white dark:bg-[#18181b] rounded-xl shadow-xl border border-gray-100 dark:border-white/10 py-2 z-50 animate-slide-up-spring">
+                        <div class="px-4 py-3 border-b border-gray-100 dark:border-white/10">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs text-gray-500 uppercase tracking-wider">Plan</p>
+                                <span id="user-tier-badge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-200 text-gray-800">Silver</span>
+                            </div>
+                            <p class="font-bold text-sm truncate mt-1" id="user-email-display">user@example.com</p>
+                        </div>
+                        <button onclick="handleLogout()" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-white/5 text-red-500 flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Log Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative h-[55vh] lg:h-[65vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+        <!-- Parallax Background -->
+        <div class="absolute inset-0 z-0">
+            <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-gray-50 dark:to-zomato-dark z-10"></div>
+            <img src="https://b.zmtcdn.com/web_assets/81f3ff974d82520780078ba1cfbd453a1583259680.png" class="w-full h-full object-cover object-center transform scale-110" style="will-change: transform;" id="hero-bg" alt="Hero Background">
+        </div>
+
+        <div class="z-20 w-full max-w-4xl animate-slide-up-spring">
+            <img src="https://b.zmtcdn.com/web_assets/8313a97515fcb0447d2d77c276532a511583262271.png" alt="Zomato" class="h-14 md:h-20 mx-auto mb-6 drop-shadow-2xl filter brightness-110">
+            <h1 class="text-3xl md:text-6xl font-extrabold text-white mb-8 drop-shadow-lg tracking-tight">
+                Find the best food in <span class="typing-cursor text-zomato-red">Bengaluru</span>
+            </h1>
+            
+            <!-- Search Bar Complex -->
+            <div class="bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-center p-2 overflow-hidden transform hover:scale-[1.01] transition-transform duration-300">
+                <div class="w-full md:w-1/3 flex items-center px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200 relative group">
+                    <i data-lucide="map-pin" class="text-zomato-red w-6 h-6 flex-shrink-0 group-hover:animate-bounce"></i>
+                    <input type="text" value="Bengaluru" class="w-full ml-3 text-gray-700 focus:outline-none font-medium bg-transparent" placeholder="Location">
+                    <i data-lucide="chevron-down" class="text-gray-400 w-5 h-5 absolute right-4"></i>
+                </div>
+                <div class="w-full md:w-2/3 flex items-center px-4 py-3 relative">
+                    <i data-lucide="search" class="text-gray-400 w-6 h-6 flex-shrink-0"></i>
+                    <input id="main-search" type="text" class="w-full ml-3 text-gray-700 focus:outline-none bg-transparent text-lg" placeholder="Search for 'Biryani', 'Pizza'...">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 lg:px-8 py-12 relative z-10">
+        
+        <!-- NEW FEATURE: FIRST BITE CLUB -->
+        <section class="mb-16 relative bg-black/90 dark:bg-black rounded-[30px] p-1 overflow-hidden border border-zomato-gold/30">
+            <div class="absolute inset-0 bg-gradient-to-r from-zomato-gold/10 via-transparent to-zomato-gold/10 animate-pulse"></div>
+            <div class="relative bg-[#18181b] rounded-[28px] p-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-zomato-gold text-black text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">BETA</span>
+                            <span class="text-gold-gradient font-bold text-xs flex items-center gap-1"><i data-lucide="crown" class="w-3 h-3 text-zomato-gold"></i> Tasters Only</span>
+                        </div>
+                        <h2 class="text-3xl font-black text-white">First Bite Club</h2>
+                        <p class="text-sm text-gray-400 mt-1">Try new dishes at <span class="text-zomato-gold font-bold">50% OFF</span>. Exclusive to Foodie Members.</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex items-center gap-2 bg-white/5 rounded-lg px-4 py-2 border border-white/10">
+                        <i data-lucide="clock" class="w-4 h-4 text-zomato-gold animate-pulse"></i>
+                        <span class="text-xs font-mono text-white">Spots refreshing in 02:14:05</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="first-bite-container">
+                    <!-- Taster Cards Injected Here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- RISING STARS SECTION (Dynamic Logic) -->
+        <section class="mb-24 relative group perspective-1000">
+            <!-- Mesh Gradient Background -->
+            <div class="absolute inset-0 -m-4 rounded-[30px] mesh-bg opacity-80 dark:opacity-60 blur-xl transition-opacity duration-500 group-hover:opacity-100"></div>
+            
+            <div class="relative bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl rounded-[24px] p-6 md:p-10 border border-white/20 shadow-2xl overflow-hidden">
+                <!-- Decorative Blobs -->
+                <div class="absolute -top-20 -right-20 w-96 h-96 bg-zomato-red/20 rounded-full blur-[80px] animate-pulse-glow"></div>
+                
+                <div class="flex flex-col md:flex-row justify-between items-end mb-10 relative z-10">
+                    <div class="w-full">
+                        <div class="flex items-center gap-3 mb-3">
+                            <span class="bg-gradient-to-r from-orange-500 to-red-600 text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-red-500/20">Last 30 Days</span>
+                            <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 font-bold text-sm flex items-center gap-1">
+                                <i data-lucide="brain-circuit" class="w-3 h-3"></i> ML Recommended
+                            </span>
+                        </div>
+                        <h2 id="dynamic-header" class="text-3xl md:text-5xl font-black tracking-tight mb-4 text-gray-900 dark:text-white">
+                            Rising Stars
+                        </h2>
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <div class="flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800/50">
+                                <span class="font-bold text-zomato-red">TRYNEW50</span>
+                                <span class="text-xs text-gray-600 dark:text-gray-300">Code</span>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-300 text-sm">Get <span class="font-bold text-zomato-red">50% OFF</span> on these new spots</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 mt-6 md:mt-0">
+                        <button id="scroll-left" class="p-3 rounded-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition active:scale-90 shadow-sm"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                        <button id="scroll-right" class="p-3 rounded-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition active:scale-90 shadow-sm"><i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+
+                <div id="rising-stars-scroll" class="flex gap-8 overflow-x-auto hide-scroll pb-12 snap-x scroll-pl-4 pt-4">
+                    <!-- 3D Cards Injected via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Sticky Filter Bar -->
+        <div id="filter-bar" class="sticky top-[76px] z-40 transition-all duration-300 mb-10">
+            <div class="glass-panel rounded-xl p-2 shadow-lg ring-1 ring-black/5 mx-auto max-w-fit lg:max-w-full overflow-x-auto hide-scroll">
+                <div class="flex items-center gap-2">
+                    <button class="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-zomato-red text-white rounded-lg shadow-lg shadow-red-500/30 hover:bg-red-600 transition-all active:scale-95 font-medium">
+                        <i data-lucide="utensils" class="w-4 h-4"></i> Dining Out
+                    </button>
+                    <button class="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all text-gray-600 dark:text-gray-300 font-medium">
+                        <i data-lucide="truck" class="w-4 h-4"></i> Delivery
+                    </button>
+                    <div class="w-px h-6 bg-gray-300 dark:bg-white/20 mx-2"></div>
+                    <button class="filter-chip flex-shrink-0 text-sm border border-gray-300 dark:border-white/10 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Filters <i data-lucide="list-filter" class="w-3 h-3 inline ml-1"></i></button>
+                    <button class="filter-chip flex-shrink-0 text-sm border border-gray-300 dark:border-white/10 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Pure Veg</button>
+                    <button class="filter-chip flex-shrink-0 text-sm border border-gray-300 dark:border-white/10 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Rating: 4.0+ <i data-lucide="star" class="w-3 h-3 inline ml-1"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <section>
+            <h3 class="text-3xl font-black mb-8 text-gray-900 dark:text-white border-l-8 border-zomato-red pl-4">Best Food in Bengaluru</h3>
+            <div id="restaurants-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                <!-- Standard Cards Injected Here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-black mt-24 border-t border-gray-200 dark:border-white/10 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-zomato-red via-yellow-500 to-blue-500"></div>
+        <div class="container mx-auto px-8 py-12">
+            <!-- Top Section: Logo & Country -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-12">
+                 <img src="https://b.zmtcdn.com/web_assets/b40b97e677bc7b2ca77c58c61db266fe1603954218.png" alt="Zomato" class="h-8 w-auto mb-4 md:mb-0 filter grayscale hover:grayscale-0 transition duration-500">
+                 <div class="flex gap-4">
+                     <div class="border border-gray-300 dark:border-white/20 rounded p-2 flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 text-sm">
+                         <img src="https://flagcdn.com/in.svg" class="w-5 h-auto rounded-sm"> India <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                     </div>
+                     <div class="border border-gray-300 dark:border-white/20 rounded p-2 flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 text-sm">
+                         <i data-lucide="globe" class="w-4 h-4"></i> English <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                     </div>
+                 </div>
+            </div>
+
+            <!-- Links Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-8 mb-16 text-sm">
+                <div>
+                    <h4 class="font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 text-xs">About Zomato</h4>
+                    <ul class="space-y-2 text-gray-500 dark:text-gray-400">
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Who We Are</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Blog</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Work With Us</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Investor Relations</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Report Fraud</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 text-xs">Zomaverse</h4>
+                    <ul class="space-y-2 text-gray-500 dark:text-gray-400">
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Zomato</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Blinkit</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Feeding India</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Hyperpure</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Zomaland</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 text-xs">For Restaurants</h4>
+                    <ul class="space-y-2 text-gray-500 dark:text-gray-400">
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Partner With Us</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Apps For You</a></li>
+                    </ul>
+                    <h4 class="font-bold text-gray-900 dark:text-white uppercase tracking-widest mt-6 mb-4 text-xs">For Enterprises</h4>
+                    <ul class="space-y-2 text-gray-500 dark:text-gray-400">
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Zomato For Work</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 text-xs">Learn More</h4>
+                    <ul class="space-y-2 text-gray-500 dark:text-gray-400">
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Privacy</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Security</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Terms</a></li>
+                        <li><a href="#" class="hover:text-gray-900 dark:hover:text-white transition">Sitemap</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 text-xs">Social Links</h4>
+                    <div class="flex gap-3 mb-6">
+                        <a href="#" class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs hover:scale-110 transition"><i data-lucide="linkedin" class="w-3 h-3"></i></a>
+                        <a href="#" class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs hover:scale-110 transition"><i data-lucide="instagram" class="w-3 h-3"></i></a>
+                        <a href="#" class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs hover:scale-110 transition"><i data-lucide="twitter" class="w-3 h-3"></i></a>
+                        <a href="#" class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs hover:scale-110 transition"><i data-lucide="youtube" class="w-3 h-3"></i></a>
+                        <a href="#" class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs hover:scale-110 transition"><i data-lucide="facebook" class="w-3 h-3"></i></a>
+                    </div>
+                    <img src="https://b.zmtcdn.com/data/webuikit/9f0c85a5e33adb783fa0aef667075f9e1556003622.png" alt="App Store" class="h-8 mb-2 cursor-pointer hover:opacity-80 transition">
+                    <img src="https://b.zmtcdn.com/data/webuikit/23e930757c3df49840c482a8638bf5c31556001144.png" alt="Play Store" class="h-8 cursor-pointer hover:opacity-80 transition">
+                </div>
+            </div>
+
+            <!-- Copyright -->
+            <div class="pt-8 border-t border-gray-200 dark:border-white/10 text-center md:text-left">
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    By continuing past this page, you agree to our Terms of Service, Cookie Policy, Privacy Policy and Content Policies. All trademarks are properties of their respective owners. 2008-2025 © Zomato™ Ltd. All rights reserved.
+                </p>
+                <div class="mt-4 flex items-center justify-center md:justify-start gap-1 text-xs text-gray-400">
+                    <span>Designed & Developed by</span>
+                    <span class="font-bold text-transparent bg-clip-text bg-gradient-to-r from-zomato-red to-zomato-gold">Krushanth M</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Membership Selection Modal -->
+    <div id="membership-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-xl transition-opacity" onclick="closeMembershipModal()"></div>
+        <div class="relative w-full max-w-5xl p-6 z-20 animate-slide-up-spring">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl font-black text-white mb-2">Choose Your Dining Experience</h2>
+                <p class="text-gray-400">Select a plan to unlock exclusive benefits and start your journey.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="membership-container">
+                <!-- Dynamic Membership Cards -->
+            </div>
+            
+            <button onclick="closeMembershipModal()" class="mt-8 mx-auto block text-gray-500 hover:text-white text-sm underline">I'll decide later</button>
+        </div>
+    </div>
+
+    <!-- Login/Signup Modal -->
+    <div id="login-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeLoginModal()"></div>
+        <div class="relative bg-white dark:bg-[#18181b] w-full max-w-md p-8 rounded-3xl shadow-2xl transform scale-95 transition-all animate-slide-up-spring">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex flex-col">
+                    <h2 class="text-3xl font-black dark:text-white" id="auth-title">Welcome</h2>
+                    <p class="text-xs text-zomato-red font-bold mt-1 hidden" id="auth-subtitle">Signing up for Gold</p>
+                </div>
+                <button onclick="closeLoginModal()" class="p-2 bg-gray-100 dark:bg-white/10 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <p class="text-gray-500 mb-6 text-sm">Enter your credentials to access your account.</p>
+            <div class="space-y-4">
+                <input type="email" id="login-email" placeholder="Email" class="w-full p-4 rounded-xl bg-gray-100 dark:bg-white/5 border border-transparent focus:border-zomato-red outline-none dark:text-white">
+                <button class="w-full bg-zomato-red text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/30 hover:bg-red-600 transition" onclick="handleLogin()">Continue</button>
+                <div class="flex items-center gap-4 my-4">
+                    <div class="h-px bg-gray-200 dark:bg-white/10 flex-1"></div>
+                    <span class="text-xs text-gray-400">OR</span>
+                    <div class="h-px bg-gray-200 dark:bg-white/10 flex-1"></div>
+                </div>
+                <button class="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-white/10 transition">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5"> Continue with Google
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Cart Bar -->
+    <div id="cart-bar" onclick="openCartModal()" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] md:w-[450px] glass-panel bg-zomato-red/90 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl shadow-red-900/40 z-50 cursor-pointer translate-y-[200%] transition-transform duration-500 flex justify-between items-center border border-white/10 hover:scale-105">
+        <div class="flex flex-col pl-2">
+            <span class="font-extrabold text-sm tracking-wide"><span id="cart-count">0</span> ITEM(S) ADDED</span>
+            <span class="text-[10px] opacity-80 uppercase tracking-widest">View Bill</span>
+        </div>
+        <div class="flex items-center gap-3 font-bold text-lg pr-2">
+            View Cart <div class="bg-white text-zomato-red p-1.5 rounded-full"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+        </div>
+    </div>
+
+    <!-- Restaurant Menu Modal (Slide Up) -->
+    <div id="menu-modal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity opacity-0" id="menu-backdrop" onclick="closeMenuModal()"></div>
+        <div class="absolute bottom-0 md:top-0 md:right-0 md:bottom-0 w-full md:w-[600px] bg-white dark:bg-[#18181b] shadow-2xl flex flex-col h-[92vh] md:h-full rounded-t-[30px] md:rounded-l-[30px] md:rounded-tr-none transform translate-y-full md:translate-x-full transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1)" id="menu-panel">
+            
+            <!-- Menu Header -->
+            <div id="menu-header" class="h-64 bg-gray-200 bg-cover bg-center relative shrink-0 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-t from-[#18181b] via-transparent to-black/30"></div>
+                <button onclick="closeMenuModal()" class="absolute top-6 right-6 bg-white/20 backdrop-blur-md text-white p-2.5 rounded-full hover:bg-white hover:text-black transition-all transform hover:rotate-90"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <div class="absolute bottom-0 left-0 w-full p-8 text-white bg-gradient-to-t from-[#18181b] to-transparent">
+                    <div id="busy-banner" class="hidden bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full mb-2 w-fit animate-pulse items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> High Demand • Busy</div>
+                    <h2 id="menu-title" class="text-4xl font-black mb-1 tracking-tight">Restaurant Name</h2>
+                    <p id="menu-subtitle" class="text-sm opacity-80 font-light tracking-wide">Cuisine • Location</p>
+                    <div class="flex items-center gap-3 mt-4">
+                        <!-- Gamification Button -->
+                        <button onclick="openReviewModal()" class="bg-white text-black px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 hover:bg-gray-200 hover:scale-105 transition">
+                            <i data-lucide="pen-tool" class="w-3 h-3"></i> Rate & Unlock Coupon
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu List -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar" id="menu-list">
+                <!-- Menu items injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Modal (Right Sheet) -->
+    <div id="cart-modal" class="fixed inset-0 z-[70] hidden">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity opacity-0" id="cart-backdrop" onclick="closeCartModal()"></div>
+        <div class="absolute bottom-0 right-0 md:top-0 w-full md:w-[500px] bg-gray-50 dark:bg-[#121212] h-[90vh] md:h-full shadow-2xl rounded-t-[30px] md:rounded-none md:rounded-l-[30px] flex flex-col transform translate-y-full md:translate-x-full transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1)" id="cart-panel">
+            
+            <div class="p-6 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-white dark:bg-[#18181b] rounded-t-[30px] md:rounded-tl-[30px]">
+                <h2 class="text-2xl font-black flex items-center gap-3"><i data-lucide="shopping-cart" class="text-zomato-red fill-current"></i> My Order</h2>
+                <button onclick="closeCartModal()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-zomato-red transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="cart-content">
+                    <div id="cart-items-list" class="bg-white dark:bg-[#18181b] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-white/5 mb-6"></div>
+
+                    <!-- Coupon Section -->
+                    <div class="bg-white dark:bg-[#18181b] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-white/5 mb-6 cursor-pointer hover:border-blue-500/50 transition group" onclick="toggleCoupons()">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-4">
+                                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl text-blue-600 group-hover:scale-110 transition-transform"><i data-lucide="percent" class="w-6 h-6"></i></div>
+                                <div>
+                                    <p class="font-bold text-sm">Apply Coupon</p>
+                                    <p id="applied-coupon-text" class="text-xs text-gray-500 dark:text-gray-400">See offers</p>
+                                </div>
+                            </div>
+                            <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <!-- Bill Details -->
+                    <div class="bg-white dark:bg-[#18181b] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-white/5">
+                        <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-gray-400">Bill Summary</h3>
+                        <div class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                            <div class="flex justify-between"><span>Item Total</span><span id="bill-item-total" class="font-mono">₹0</span></div>
+                            <div class="flex justify-between"><span>Delivery Fee</span><span id="bill-delivery" class="text-green-500 font-bold">FREE</span></div>
+                            <div class="flex justify-between"><span>Taxes (5%)</span><span id="bill-tax" class="font-mono">₹0</span></div>
+                            <div class="flex justify-between font-bold text-green-500 hidden" id="bill-discount-row"><span>Discount</span><span id="bill-discount" class="font-mono">-₹0</span></div>
+                            <div class="h-px bg-gray-200 dark:bg-white/10 my-2"></div>
+                            <div class="flex justify-between font-extrabold text-xl text-gray-900 dark:text-white"><span>To Pay</span><span id="bill-final" class="font-mono">₹0</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Place Order -->
+            <div id="cart-footer" class="p-6 bg-white dark:bg-[#18181b] border-t border-gray-200 dark:border-white/5">
+                <button onclick="placeOrder()" class="w-full bg-gradient-to-r from-zomato-red to-red-600 text-white font-bold py-4 rounded-2xl shadow-xl shadow-red-500/30 text-lg flex justify-between px-8 items-center transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden">
+                    <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                    <div class="flex flex-col text-left relative z-10">
+                        <span id="pay-btn-amount" class="font-mono">₹0</span>
+                        <span class="text-[10px] font-normal opacity-80">TOTAL</span>
+                    </div>
+                    <span class="relative z-10 flex items-center gap-2">Place Order <i data-lucide="arrow-right" class="w-5 h-5"></i></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coupon Selection Sheet -->
+    <div id="coupon-sheet" class="fixed inset-0 z-[80] hidden flex items-end md:items-center justify-center">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-md transition-opacity opacity-0" id="coupon-backdrop" onclick="toggleCoupons()"></div>
+        <div class="relative bg-white dark:bg-[#18181b] w-full md:w-[450px] rounded-t-[30px] md:rounded-[30px] p-8 max-h-[70vh] overflow-y-auto transform translate-y-full transition-transform duration-500" id="coupon-panel">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-xl font-black">Available Coupons</h3>
+                <button onclick="toggleCoupons()" class="p-2 bg-gray-100 dark:bg-white/5 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-4" id="coupons-list"></div>
+        </div>
+    </div>
+
+    <!-- REVIEW GAMIFICATION MODAL -->
+    <div id="review-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
+        <div class="relative bg-white dark:bg-[#18181b] w-[90%] max-w-md rounded-2xl p-6 text-center border border-white/10 shadow-2xl transform scale-90 transition-transform duration-300" id="review-panel">
+            <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                <i data-lucide="check-circle" class="w-3 h-3"></i> Verified Diner (GPS Matched)
+            </div>
+            <h3 class="text-2xl font-black mb-2">Rate your experience</h3>
+            <p class="text-sm text-gray-500 mb-6">Rate 4+ stars to unlock a secret coupon!</p>
+            <div class="flex justify-center gap-2 mb-6">
+                <button onclick="submitReview(1)" class="hover:scale-110 transition"><i data-lucide="star" class="w-8 h-8 text-gray-300 hover:text-yellow-400 fill-current"></i></button>
+                <button onclick="submitReview(2)" class="hover:scale-110 transition"><i data-lucide="star" class="w-8 h-8 text-gray-300 hover:text-yellow-400 fill-current"></i></button>
+                <button onclick="submitReview(3)" class="hover:scale-110 transition"><i data-lucide="star" class="w-8 h-8 text-gray-300 hover:text-yellow-400 fill-current"></i></button>
+                <button onclick="submitReview(4)" class="hover:scale-110 transition"><i data-lucide="star" class="w-8 h-8 text-gray-300 hover:text-yellow-400 fill-current"></i></button>
+                <button onclick="submitReview(5)" class="hover:scale-110 transition"><i data-lucide="star" class="w-8 h-8 text-gray-300 hover:text-yellow-400 fill-current"></i></button>
+            </div>
+            <button onclick="closeReviewModal()" class="text-sm text-gray-400 underline">Skip</button>
+        </div>
+    </div>
+
+    <!-- UNLOCK SUCCESS POPUP -->
+    <div id="unlock-popup" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[80] hidden pointer-events-none">
+        <div class="bg-gradient-to-r from-zomato-gold to-yellow-600 text-black p-6 rounded-2xl shadow-2xl text-center border-4 border-white animate-bounce-slow">
+            <h2 class="text-3xl font-black mb-1">UNLOCKED!</h2>
+            <p class="font-bold text-sm mb-2">Second Serving Coupon</p>
+            <div class="bg-black/10 rounded p-2 font-mono text-xl font-black tracking-widest select-all">MYSTERY40</div>
+            <p class="text-[10px] mt-2 font-bold">40% OFF NEXT ORDER</p>
+        </div>
+    </div>
+
+    <script>
+        // ================= DATA & CONSTANTS =================
+        const PLACEHOLDER_IMG = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80";
+
+        // Memberships Data
+        const memberships = [
+            {
+                id: 'silver',
+                name: 'Zomato Silver',
+                price: 'Free', 
+                bg: 'bg-gradient-to-br from-gray-200 to-gray-400',
+                textColor: 'text-gray-900',
+                accent: 'text-gray-700',
+                benefits: ['Standard Delivery', 'Access to all restaurants', 'Pay per order']
+            },
+            {
+                id: 'gold',
+                name: 'Zomato Gold',
+                price: '₹249/mo',
+                trial: 'Try 7 Days Free', 
+                bg: 'bg-gradient-to-br from-yellow-300 via-yellow-500 to-yellow-600',
+                textColor: 'text-black',
+                accent: 'text-yellow-900',
+                benefits: ['Free Delivery (< 10km)', 'Extra 10% OFF', 'Priority Support', 'No Surge Fees during rain']
+            },
+            {
+                id: 'foodie', 
+                name: 'Foodie Membership', 
+                price: '₹499/mo',
+                trial: 'Try 7 Days Free', 
+                bg: 'bg-gradient-to-br from-slate-800 via-black to-slate-900 border border-white/20',
+                textColor: 'text-white',
+                accent: 'text-gray-300',
+                benefits: ['Free Delivery (Unlimited)', 'Extra 20% OFF', 'First Bite Club (50% OFF)', 'Intercity Legends Access'] 
+            }
+        ];
+
+        // ML Simulation Preferences
+        const userPreferences = {
+            tags: ['Asian', 'Healthy', 'Modern Indian', 'Burger'], 
+            minRating: 4.0
+        };
+
+        // Taster Deals Data
+        const tasterDeals = [
+            { id: 1, restId: 7, name: "Dragon Noodles", originalPrice: 160, dealPrice: 0, spots: 3, img: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400", restName: "Wok & Roll" },
+            { id: 2, restId: 1, name: "Spicy Miso Ramen", originalPrice: 185, dealPrice: 0, spots: 1, img: "https://images.unsplash.com/photo-1591814468924-caf88d1232e1?w=400", restName: "Neon Ramen" },
+            { id: 3, restId: 3, name: "Modern Chaat", originalPrice: 150, dealPrice: 0, spots: 5, img: "https://images.unsplash.com/photo-1585937421612-70a008356f36?w=800", restName: "Spice Labs" }
+        ];
+
+        // Enhanced Data
+        const restaurants = [
+            { 
+                id: 1, 
+                name: "Neon Ramen", 
+                cuisine: "Asian", 
+                joinDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+                verified: true, 
+                greenPartner: false, 
+                totalReviews: 8, // Low reviews -> hide stars
+                rating: 4.8, 
+                price: 190,
+                image: "https://images.unsplash.com/photo-1553621042-f6e147245754?w=800" 
+            },
+            { 
+                id: 7, 
+                name: "Wok & Roll", 
+                cuisine: "Asian", 
+                joinDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago - VERY NEW
+                verified: true, 
+                greenPartner: true, 
+                totalReviews: 150, // High reviews despite being new = BUSY
+                rating: 4.9, 
+                price: 180,
+                isBusy: true, 
+                image: "https://images.unsplash.com/photo-1564489563601-c53cfc451e93?w=800" 
+            },
+            { 
+                id: 2, 
+                name: "The Green Bowl", 
+                cuisine: "Healthy", 
+                joinDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago
+                verified: true, 
+                greenPartner: true, 
+                totalReviews: 120, 
+                rating: 4.5, 
+                price: 160,
+                image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800" 
+            },
+            { 
+                id: 3, 
+                name: "Spice Labs", 
+                cuisine: "Modern Indian", 
+                joinDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+                verified: false, 
+                greenPartner: false, 
+                totalReviews: 3, 
+                rating: 0, 
+                price: 150,
+                image: "https://images.unsplash.com/photo-1585937421612-70a008356f36?w=800" 
+            },
+            { 
+                id: 4, 
+                name: "Meghana Foods", 
+                cuisine: "Biryani", 
+                joinDate: "2020-01-01", 
+                verified: true, 
+                greenPartner: false, 
+                totalReviews: 5000, 
+                rating: 4.4, 
+                price: 195,
+                image: "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=800" 
+            },
+            { 
+                id: 5, 
+                name: "Truffles", 
+                cuisine: "Burger", 
+                joinDate: "2018-05-10", 
+                verified: true, 
+                greenPartner: true, 
+                totalReviews: 8000, 
+                rating: 4.6, 
+                price: 170,
+                image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800" 
+            },
+            { 
+                id: 6, 
+                name: "Empire", 
+                cuisine: "North Indian", 
+                joinDate: "2019-03-15", 
+                verified: true, 
+                greenPartner: false, 
+                totalReviews: 3000, 
+                rating: 4.1, 
+                price: 165,
+                image: "https://images.unsplash.com/photo-1596797038530-2c107229654b?w=800" 
+            }
+        ];
+
+        const menuDb = {
+            1: [ // Neon Ramen
+                { name: "Tonkotsu Ramen", price: 199, veg: false, isMustTry: true, desc: "12hr pork broth, chashu, egg.", img: "https://images.unsplash.com/photo-1555126634-323283e090fa?w=400" },
+                { name: "Spicy Miso Ramen", price: 185, veg: true, isMustTry: true, desc: "Fermented bean paste broth, spicy oil.", img: "https://images.unsplash.com/photo-1591814468924-caf88d1232e1?w=400" },
+                { name: "Gyoza", price: 120, veg: false, isMustTry: false, desc: "Pan fried dumplings (5pcs).", img: "https://images.unsplash.com/photo-1541696432-82c6da8ce7ea?w=400" }
+            ],
+            7: [ // Wok & Roll
+                { name: "Dragon Noodles", price: 160, veg: true, isMustTry: true, desc: "Fiery schezwan noodles with peppers.", img: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400" },
+                { name: "Kung Pao Chicken", price: 190, veg: false, isMustTry: true, desc: "Spicy stir-fry with peanuts.", img: "https://images.unsplash.com/photo-1525755662778-989d0524087e?w=400" },
+                { name: "Spring Rolls", price: 90, veg: true, isMustTry: false, desc: "Crispy golden rolls (4pcs).", img: "https://images.unsplash.com/photo-1548507325-67d3573d2c2e?w=400" }
+            ],
+            2: [ // Green Bowl
+                { name: "Avocado Toast", price: 150, veg: true, isMustTry: true, desc: "Sourdough with feta and chili flakes.", img: "https://images.unsplash.com/photo-1588137372308-15f75323ca8d?w=400" },
+                { name: "Quinoa Salad", price: 140, veg: true, isMustTry: false, desc: "Fresh veggies, lemon vinaigrette.", img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400" }
+            ],
+            4: [ // Meghana Foods (Default fallback for others)
+                { name: "Chicken Biryani", price: 180, veg: false, isMustTry: true, desc: "Richly flavored aromatic rice.", img: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400" },
+                { name: "Paneer Butter Masala", price: 140, veg: true, isMustTry: false, desc: "Cottage cheese in creamy tomato gravy.", img: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400" }
+            ]
+        };
+
+        const coupons = [
+            { code: "TRYNEW50", title: "50% OFF up to ₹100", desc: "Valid on Rising Star restaurants only", min: 150, type: 'rising_special' },
+            { code: "ZOMATO", title: "Flat ₹50 OFF", desc: "On orders above ₹300", min: 300, type: 'flat', value: 50 },
+            { code: "TASTY", title: "20% OFF", desc: "Up to ₹50 on all orders", min: 0, type: 'percent', value: 20, cap: 50 },
+            { code: "MYSTERY40", title: "40% OFF", desc: "Secret unlock reward", min: 0, type: 'percent', value: 40, cap: 200 }
+        ];
+
+        let cart = { restaurantId: null, items: {}, coupon: null };
+        let isLoggedIn = false;
+        let selectedMembership = null;
+
+        // ================= MEMBERSHIP & AUTH LOGIC =================
+        function openSignupFlow() {
+            const modal = document.getElementById('membership-modal');
+            const container = document.getElementById('membership-container');
+            
+            // Render Membership Cards
+            container.innerHTML = memberships.map(tier => `
+                <div class="relative overflow-hidden rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300 cursor-pointer group h-full ${tier.bg}" onclick="selectMembership('${tier.id}')">
+                    <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                    <div class="p-6 flex flex-col h-full relative z-10">
+                        <h3 class="text-2xl font-black ${tier.textColor} mb-1">${tier.name}</h3>
+                        <p class="text-lg font-bold ${tier.accent} mb-6">${tier.price}</p>
+                        
+                        <ul class="space-y-3 mb-8 flex-1">
+                            ${tier.benefits.map(b => `
+                                <li class="flex items-start gap-2 text-sm ${tier.textColor} font-medium">
+                                    <i data-lucide="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i> ${b}
+                                </li>
+                            `).join('')}
+                        </ul>
+                        
+                        <button class="w-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 ${tier.textColor} font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                            ${tier.price === 'Free' ? 'Select Plan' : 'Start Free Trial'} <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                        ${tier.trial ? `<p class="text-xs text-center mt-2 ${tier.textColor} opacity-80">${tier.trial}</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            lucide.createIcons();
+            modal.classList.remove('hidden');
+        }
+
+        function closeMembershipModal() {
+            document.getElementById('membership-modal').classList.add('hidden');
+        }
+
+        function selectMembership(tierId) {
+            selectedMembership = memberships.find(m => m.id === tierId);
+            closeMembershipModal();
+            
+            // Open Signup with Context
+            const modal = document.getElementById('login-modal');
+            const title = document.getElementById('auth-title');
+            const subtitle = document.getElementById('auth-subtitle');
+            
+            if(title) title.innerText = `Join ${selectedMembership.name}`;
+            if(subtitle) {
+                subtitle.innerText = `Start your ${selectedMembership.name} membership`;
+                subtitle.classList.remove('hidden');
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function openLoginModal() {
+            const modal = document.getElementById('login-modal');
+            const title = document.getElementById('auth-title');
+            const subtitle = document.getElementById('auth-subtitle');
+            
+            if(title) title.innerText = "Welcome Back";
+            if(subtitle) subtitle.classList.add('hidden');
+            
+            selectedMembership = null; // Reset for simple login
+            modal.classList.remove('hidden');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('login-modal').classList.add('hidden');
+        }
+
+        function handleLogin() {
+            const emailInput = document.getElementById('login-email');
+            const email = emailInput.value;
+            
+            if (!email || !email.includes('@')) {
+                showToast('Please enter a valid email');
+                return;
+            }
+
+            isLoggedIn = true;
+            
+            // Determine Membership to Display
+            // Default to Silver if just logging in without flow
+            if (!selectedMembership) {
+                 selectedMembership = memberships.find(m => m.id === 'silver');
+            }
+
+            const tierDisplay = selectedMembership.name;
+            const tierColor = selectedMembership.id === 'gold' ? 'bg-yellow-100 text-yellow-800' : (selectedMembership.id === 'foodie' ? 'bg-black text-white' : 'bg-gray-200 text-gray-800');
+
+            // Update UI
+            const firstLetter = email.charAt(0).toUpperCase();
+            const avatar = document.getElementById('user-avatar');
+            const emailDisplay = document.getElementById('user-email-display');
+            const tierBadge = document.getElementById('user-tier-badge');
+            const navBadge = document.getElementById('nav-membership-badge');
+            
+            if (avatar) avatar.innerText = firstLetter;
+            if (emailDisplay) emailDisplay.innerText = email;
+            
+            if (tierBadge) {
+                tierBadge.innerText = tierDisplay;
+                tierBadge.className = `text-[10px] font-bold px-2 py-0.5 rounded ${tierColor}`;
+            }
+
+            if (navBadge) {
+                navBadge.innerText = tierDisplay;
+                // Styling depending on tier
+                if(selectedMembership.id === 'foodie') {
+                    navBadge.className = "hidden md:block px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-slate-800 to-black text-white border border-white/20 shadow-lg";
+                } else if (selectedMembership.id === 'gold') {
+                    navBadge.className = "hidden md:block px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-300 to-yellow-500 text-black border border-yellow-600/20 shadow-lg";
+                } else {
+                    navBadge.className = "hidden md:block px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-800 border border-gray-300 shadow-sm";
+                }
+            }
+            
+            const authBtns = document.getElementById('auth-buttons');
+            const userProfile = document.getElementById('user-profile');
+            const membershipBtn = document.getElementById('nav-btn-membership');
+
+            if (authBtns) authBtns.classList.add('hidden');
+            if (userProfile) {
+                userProfile.classList.remove('hidden');
+                userProfile.classList.add('flex');
+            }
+            if (membershipBtn) membershipBtn.classList.remove('hidden');
+
+            closeLoginModal();
+            
+            const welcomeMsg = `Welcome to ${selectedMembership.name}!`;
+            showToast(welcomeMsg);
+            
+            if(selectedMembership.id !== 'silver') {
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: selectedMembership.id === 'gold' ? ['#FFD700'] : ['#000000', '#FFFFFF'] });
+            }
+        }
+
+        function handleLogout() {
+            isLoggedIn = false;
+            selectedMembership = null;
+            
+            const authBtns = document.getElementById('auth-buttons');
+            const userProfile = document.getElementById('user-profile');
+            const emailInput = document.getElementById('login-email');
+            const membershipBtn = document.getElementById('nav-btn-membership');
+
+            if (authBtns) authBtns.classList.remove('hidden');
+            if (userProfile) {
+                userProfile.classList.add('hidden');
+                userProfile.classList.remove('flex');
+            }
+            if (membershipBtn) membershipBtn.classList.add('hidden');
+            
+            if (emailInput) emailInput.value = ''; 
+            showToast('Logged out successfully');
+        }
+
+        // ================= CORE LOGIC FUNCTIONS =================
+        function getRisingStars() {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            return restaurants.filter(r => {
+                const joinDate = new Date(r.joinDate);
+                const isNew = joinDate >= thirtyDaysAgo;
+                const matchesPref = userPreferences.tags.includes(r.cuisine);
+                return isNew && matchesPref;
+            });
+        }
+
+        function setDynamicHeader(stars) {
+            if(stars.length === 0) return;
+            const counts = {};
+            let max = 0;
+            let dom = "";
+            stars.forEach(s => {
+                counts[s.cuisine] = (counts[s.cuisine] || 0) + 1;
+                if(counts[s.cuisine] > max) { max = counts[s.cuisine]; dom = s.cuisine; }
+            });
+            
+            const header = document.getElementById('dynamic-header');
+            if (header) {
+                header.innerHTML = `New & Hidden <span class="text-transparent bg-clip-text bg-gradient-to-r from-zomato-red to-orange-500">${dom}</span> Spots`;
+            }
+        }
+
+        // ================= UI GENERATORS =================
+        function createFirstBiteCard(data) {
+            const discountedPrice = Math.floor(data.originalPrice / 2);
+            return `
+            <div class="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-4 hover:bg-white/10 transition-colors group relative overflow-hidden">
+                <div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 relative">
+                    <img src="${data.img}" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                    <div class="absolute bottom-1 left-0 w-full text-center text-[10px] font-bold text-zomato-gold animate-pulse">${data.spots} Spots Left</div>
+                </div>
+                <div class="flex-1 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-white text-lg leading-tight">${data.name}</h3>
+                            <div class="bg-green-500/20 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded">50% OFF</div>
+                        </div>
+                        <p class="text-gray-400 text-xs mt-1">by ${data.restName}</p>
+                        <p class="text-zomato-gold text-[10px] mt-1 italic">Exclusively for Foodie Members</p>
+                    </div>
+                    <div class="flex items-end justify-between mt-2">
+                        <div class="flex flex-col">
+                            <span class="text-gray-500 text-xs line-through">₹${data.originalPrice}</span>
+                            <span class="text-white font-bold text-xl">₹${discountedPrice}</span>
+                        </div>
+                        <button onclick="claimTasterDeal(${data.id})" class="bg-gradient-to-r from-zomato-gold to-yellow-600 text-black font-bold text-xs px-4 py-2 rounded-lg shadow-lg hover:scale-105 transition active:scale-95">Claim Spot</button>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        function createCard(data, type) {
+            const fallback = `this.onerror=null;this.src='${PLACEHOLDER_IMG}';`;
+            const showStars = data.totalReviews >= 10;
+            const ratingHTML = showStars 
+                ? `<div class="bg-green-600 text-white text-xs font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg shadow-green-500/20">${data.rating} <i data-lucide="star" class="w-2 h-2 fill-current"></i></div>`
+                : `<div class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wider">Rising Star</div>`;
+
+            const verifiedBadge = data.verified 
+                ? `<div class="tooltip-container relative inline-block ml-1">
+                     <i data-lucide="shield-check" class="w-4 h-4 text-zomato-gold fill-current inline"></i>
+                     <div class="tooltip-text absolute bottom-full left-1/2 -translate-x-1/2 bg-black text-white text-[9px] p-1 rounded w-24 text-center z-20 mb-1">Kitchen Verified</div>
+                   </div>` : '';
+            
+            const greenBadge = data.greenPartner
+                ? `<div class="tooltip-container relative inline-block ml-1">
+                     <i data-lucide="leaf" class="w-4 h-4 text-green-500 fill-current inline"></i>
+                     <div class="tooltip-text absolute bottom-full left-1/2 -translate-x-1/2 bg-green-800 text-white text-[9px] p-1 rounded w-24 text-center z-20 mb-1">Green Partner</div>
+                   </div>` : '';
+            
+            if (type === 'rising') {
+                return `
+                <div onclick="openMenu(${data.id})" class="tilt-card flex-shrink-0 w-72 md:w-80 relative cursor-pointer group snap-center" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+                    <div class="tilt-content bg-white dark:bg-[#18181b] rounded-[24px] overflow-hidden shadow-xl dark:shadow-black/50 border border-white/20 transition-shadow duration-300 group-hover:shadow-2xl group-hover:shadow-red-500/20">
+                        <div class="h-52 overflow-hidden relative">
+                            <img src="${data.image}" class="w-full h-full object-cover transition duration-700 group-hover:scale-110 img-loading" onload="this.classList.remove('img-loading'); this.classList.add('img-loaded')" onerror="${fallback}">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                            <div class="absolute top-4 left-4 flex flex-col gap-2 items-start">
+                                <div class="bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg">Rising Star</div>
+                                ${data.isBusy ? '<div class="bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg animate-pulse">BUSY</div>' : ''}
+                            </div>
+                            <div class="absolute bottom-0 w-full p-5 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <div class="bg-zomato-gold text-black text-xs font-bold px-2 py-0.5 rounded shadow-lg shadow-yellow-500/20">50% OFF</div>
+                                    <span class="text-white/80 text-[10px] font-medium tracking-wide uppercase">Limited Time</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-5 relative">
+                            <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-10 group-hover:animate-shine" style="pointer-events:none;"></div>
+                            <div class="flex justify-between mb-2 items-start">
+                                <h3 class="text-xl font-bold truncate dark:text-white tracking-tight flex items-center">${data.name} ${verifiedBadge} ${greenBadge}</h3>
+                                ${ratingHTML}
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">${data.cuisine}</p>
+                            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex justify-between items-center">
+                                <span class="text-xs font-bold text-green-500 flex items-center gap-1"><i data-lucide="bike" class="w-3 h-3"></i> Free Delivery</span>
+                                <span class="text-xs text-gray-400">${data.totalReviews} Reviews</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            } else {
+                return `
+                <div onclick="openMenu(${data.id})" class="bg-white dark:bg-[#18181b] rounded-[20px] overflow-hidden hover:shadow-2xl dark:hover:shadow-black/50 transition-all duration-300 border border-transparent hover:border-gray-200 dark:hover:border-white/10 cursor-pointer group transform hover:-translate-y-1">
+                    <div class="relative h-60 overflow-hidden">
+                        <img src="${data.image}" class="w-full h-full object-cover transition duration-500 group-hover:scale-105 img-loading" onload="this.classList.remove('img-loading'); this.classList.add('img-loaded')" onerror="${fallback}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="absolute bottom-4 right-4 bg-white/90 dark:bg-black/60 backdrop-blur text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg">30 min</div>
+                        <button class="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-red-500 hover:scale-110"><i data-lucide="heart" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-lg font-bold truncate dark:text-white w-2/3 flex items-center">${data.name} ${verifiedBadge} ${greenBadge}</h3>
+                            ${ratingHTML}
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-500 dark:text-gray-400 font-medium">
+                            <span class="truncate w-1/2">${data.cuisine}</span>
+                            <span>₹${data.price} for one</span>
+                        </div>
+                        <div class="mt-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                             <span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span> Live Tracking
+                        </div>
+                    </div>
+                </div>`;
+            }
+        }
+
+        // ================= 3D TILT LOGIC =================
+        function handleTilt(e, card) {
+            const content = card.querySelector('.tilt-content');
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const rotateX = ((y - centerY) / centerY) * -10; 
+            const rotateY = ((x - centerX) / centerX) * 10;
+            content.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+            content.style.transition = 'transform 0.1s ease';
+        }
+
+        function resetTilt(card) {
+            const content = card.querySelector('.tilt-content');
+            content.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            content.style.transition = 'transform 0.5s ease';
+        }
+
+        // ================= RENDER & SEARCH =================
+        const risingStarsContainer = document.getElementById('rising-stars-scroll');
+        const gridContainer = document.getElementById('restaurants-grid');
+        const firstBiteContainer = document.getElementById('first-bite-container');
+
+        function render() {
+            const risingStars = getRisingStars();
+            setDynamicHeader(risingStars);
+
+            if (firstBiteContainer) {
+                firstBiteContainer.innerHTML = tasterDeals.map(createFirstBiteCard).join('');
+            }
+            if (risingStarsContainer) {
+                risingStarsContainer.innerHTML = risingStars.map(r => createCard(r, 'rising')).join('');
+            }
+            const standardRestaurants = restaurants.filter(r => !risingStars.includes(r));
+            if (gridContainer) {
+                gridContainer.innerHTML = standardRestaurants.map(r => createCard(r, 'standard')).join('');
+            }
+            lucide.createIcons();
+        }
+
+        const searchInput = document.getElementById('main-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                if(term.length > 2) {
+                     const grid = document.getElementById('restaurants-grid');
+                     if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        }
+
+        // ================= FIRST BITE LOGIC =================
+        function claimTasterDeal(dealId) {
+            if (!isLoggedIn) {
+                showToast("Please log in to claim exclusive deals.");
+                openLoginModal();
+                return;
+            }
+
+            if (!selectedMembership || selectedMembership.id !== 'foodie') {
+                showToast("Exclusive to Foodie Members. Please upgrade!");
+                return;
+            }
+
+            const deal = tasterDeals.find(d => d.id === dealId);
+            if (!deal) return;
+
+            if (cart.restaurantId && cart.restaurantId !== deal.restId) {
+                if (!confirm("Clear current cart? Taster deals require a separate order.")) return;
+                cart.items = {};
+                cart.coupon = null;
+            }
+
+            cart.restaurantId = deal.restId;
+            const discountedPrice = Math.floor(deal.originalPrice / 2);
+            if (!cart.items[deal.name]) {
+                cart.items[deal.name] = { price: discountedPrice, qty: 1, veg: true, isTaster: true }; 
+            } else {
+                showToast("You can only claim 1 spot per dish.");
+                return;
+            }
+
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#FFD700'] });
+            showToast(`${deal.name} Claimed! Review required.`);
+            refreshUI(deal.restId);
+            openCartModal();
+        }
+
+        // ================= MENU & CART STATE =================
+        const menuModal = document.getElementById('menu-modal');
+        const cartModal = document.getElementById('cart-modal');
+        const menuBackdrop = document.getElementById('menu-backdrop');
+        const menuPanel = document.getElementById('menu-panel');
+        const cartBackdrop = document.getElementById('cart-backdrop');
+        const cartPanel = document.getElementById('cart-panel');
+
+        function openMenu(id) {
+            const rest = restaurants.find(r => r.id === id);
+            if (!rest) return;
+
+            const isBusy = rest.isBusy || false;
+            const titleEl = document.getElementById('menu-title');
+            const subtitleEl = document.getElementById('menu-subtitle');
+            const headerEl = document.getElementById('menu-header');
+            const bannerEl = document.getElementById('busy-banner');
+
+            if (titleEl) titleEl.innerText = rest.name;
+            if (subtitleEl) subtitleEl.innerHTML = `${rest.cuisine} • Bengaluru ${rest.verified ? '<span class="text-zomato-gold ml-2 text-xs border border-zomato-gold rounded px-1">Verified</span>' : ''}`;
+            if (headerEl) headerEl.style.backgroundImage = `url('${rest.image}')`;
+            if (bannerEl) {
+                if(isBusy) bannerEl.classList.remove('hidden');
+                else bannerEl.classList.add('hidden');
+            }
+
+            const dishes = menuDb[id] || menuDb[4]; 
+            dishes.sort((a, b) => (a.isMustTry === b.isMustTry) ? 0 : a.isMustTry ? -1 : 1);
+
+            const list = document.getElementById('menu-list');
+            const fallback = `this.onerror=null;this.src='${PLACEHOLDER_IMG}';`;
+
+            if (list) {
+                list.innerHTML = dishes.map((dish) => `
+                    <div class="group bg-gray-50 dark:bg-[#121212] rounded-2xl p-4 flex justify-between items-center hover:bg-white dark:hover:bg-white/5 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-white/10 ${dish.isMustTry ? 'must-try-glow bg-yellow-50/10 dark:bg-yellow-900/10' : ''} ${isBusy ? 'opacity-60 grayscale pointer-events-none' : ''}">
+                        <div class="w-2/3 pr-4">
+                            ${dish.isMustTry ? '<span class="bg-zomato-gold text-black text-[9px] font-black px-2 py-0.5 rounded mb-2 inline-block uppercase tracking-wide shadow">Must Try</span>' : ''}
+                            <div class="mb-2">${dish.veg 
+                                ? '<div class="border border-green-500 p-0.5 rounded w-4 h-4 flex items-center justify-center"><div class="w-2 h-2 bg-green-500 rounded-full"></div></div>' 
+                                : '<div class="border border-red-500 p-0.5 rounded w-4 h-4 flex items-center justify-center"><div class="w-2 h-2 bg-red-500 rounded-full"></div></div>'}
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-zomato-red transition-colors">${dish.name}</h4>
+                            <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">₹${dish.price}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-500 line-clamp-2 leading-relaxed">${dish.desc}</p>
+                        </div>
+                        <div class="w-32 h-32 relative rounded-xl overflow-hidden shadow-md">
+                            <img src="${dish.img}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" onerror="${fallback}">
+                            <div class="absolute bottom-2 left-1/2 transform -translate-x-1/2 shadow-xl z-10 w-24">
+                                ${getAddButtonHTML(rest.id, dish.name, dish.price, dish.veg, isBusy)}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            if (menuModal) menuModal.dataset.rid = id;
+            if (menuModal) menuModal.classList.remove('hidden');
+            setTimeout(() => {
+                if (menuBackdrop) menuBackdrop.classList.remove('opacity-0');
+                if (menuPanel) menuPanel.classList.remove('translate-y-full', 'md:translate-x-full');
+            }, 10);
+            lucide.createIcons();
+        }
+
+        function closeMenuModal() {
+            if (menuBackdrop) menuBackdrop.classList.add('opacity-0');
+            if (menuPanel) menuPanel.classList.add('translate-y-full', 'md:translate-x-full');
+            setTimeout(() => {
+                if (menuModal) menuModal.classList.add('hidden');
+            }, 500);
+        }
+
+        // ================= CART & BILLING =================
+        function getAddButtonHTML(restId, name, price, veg, isBusy) {
+            if (isBusy) {
+                return `<button disabled class="w-full bg-gray-400 text-white font-bold text-sm py-2 rounded-lg cursor-not-allowed">BUSY</button>`;
+            }
+            if (cart.restaurantId === restId && cart.items[name]) {
+                return `
+                    <div class="bg-zomato-red text-white rounded-lg px-2 py-2 flex justify-between items-center font-bold text-sm shadow-lg">
+                        <button onclick="updateQty('${name}', -1, ${restId}, ${price}, ${veg})" class="px-2 hover:bg-black/20 rounded">-</button>
+                        <span>${cart.items[name].qty}</span>
+                        <button onclick="updateQty('${name}', 1, ${restId}, ${price}, ${veg})" class="px-2 hover:bg-black/20 rounded">+</button>
+                    </div>
+                `;
+            }
+            return `<button onclick="addToCart('${name}', ${price}, ${restId}, ${veg})" class="w-full bg-white text-zomato-red font-black text-sm py-2 rounded-lg shadow border border-gray-200 uppercase hover:bg-gray-50 active:scale-95 transition-all">ADD</button>`;
+        }
+
+        function addToCart(name, price, restId, veg) {
+            if (cart.restaurantId && cart.restaurantId !== restId) {
+                if (!confirm("Start a new basket? Previous items will be removed.")) return;
+                cart.items = {};
+                cart.coupon = null;
+            }
+            cart.restaurantId = restId;
+            updateQty(name, 1, restId, price, veg);
+            showToast("Added to cart");
+        }
+
+        function updateQty(name, delta, restId, price, veg) {
+            if (!cart.items[name]) cart.items[name] = { price, qty: 0, veg };
+            cart.items[name].qty += delta;
+            if (cart.items[name].qty <= 0) delete cart.items[name];
+            if (Object.keys(cart.items).length === 0) {
+                cart.restaurantId = null;
+                cart.coupon = null;
+            }
+            refreshUI(restId);
+        }
+
+        function refreshUI(restId) {
+            if (menuModal && !menuModal.classList.contains('hidden') && restId) openMenu(restId);
+            
+            const count = Object.values(cart.items).reduce((a, b) => a + b.qty, 0);
+            const countEl = document.getElementById('cart-count');
+            if (countEl) countEl.innerText = count;
+            const badgeEl = document.getElementById('nav-cart-badge');
+            if (badgeEl) badgeEl.innerText = count;
+            const bar = document.getElementById('cart-bar');
+            
+            if (count > 0) {
+                if (bar) bar.classList.remove('translate-y-[200%]');
+                if (badgeEl) badgeEl.classList.remove('scale-0');
+            } else {
+                if (bar) bar.classList.add('translate-y-[200%]');
+                if (badgeEl) badgeEl.classList.add('scale-0');
+                closeCartModal();
+            }
+            calculateBill();
+        }
+
+        function calculateBill() {
+            const totalItems = Object.values(cart.items).reduce((acc, item) => acc + (item.price * item.qty), 0);
+            const tax = Math.round(totalItems * 0.05);
+            const currentRest = restaurants.find(r => r.id === cart.restaurantId);
+            
+            let delivery = 40; 
+            if(currentRest) {
+                const joinDate = new Date(currentRest.joinDate);
+                const isNew = joinDate >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                if(isNew) delivery = 0;
+            }
+            
+            let discount = 0;
+            if (cart.coupon) {
+                if (cart.coupon.code === 'TRYNEW50') {
+                    const joinDate = new Date(currentRest.joinDate);
+                    const isNew = joinDate >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                    if (isNew) discount = Math.min(100, Math.round(totalItems * 0.5));
+                    else { cart.coupon = null; showToast("Coupon invalid for this restaurant"); }
+                } else if (cart.coupon.type === 'flat') discount = cart.coupon.value;
+                else if (cart.coupon.type === 'percent') discount = Math.min(cart.coupon.cap, Math.round(totalItems * (cart.coupon.value / 100)));
+            }
+
+            const toPay = totalItems + tax + delivery - discount;
+            const safeSetText = (id, text) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = text;
+            };
+
+            safeSetText('bill-item-total', `₹${totalItems}`);
+            safeSetText('bill-tax', `₹${tax}`);
+            
+            const delEl = document.getElementById('bill-delivery');
+            if (delEl) {
+                delEl.innerText = delivery === 0 ? "FREE" : `₹${delivery}`;
+                delEl.className = delivery === 0 ? "text-green-500 font-bold" : "";
+            }
+
+            const discRow = document.getElementById('bill-discount-row');
+            if (discRow) {
+                if (discount > 0) {
+                    discRow.classList.remove('hidden');
+                    safeSetText('bill-discount', `-₹${discount}`);
+                    safeSetText('applied-coupon-text', `${cart.coupon.code} applied`);
+                    const couponText = document.getElementById('applied-coupon-text');
+                    if(couponText) couponText.className = "text-green-500 font-bold text-xs";
+                } else {
+                    discRow.classList.add('hidden');
+                    safeSetText('applied-coupon-text', "See offers");
+                    const couponText = document.getElementById('applied-coupon-text');
+                    if(couponText) couponText.className = "text-gray-500 text-xs";
+                }
+            }
+
+            safeSetText('bill-final', `₹${toPay}`);
+            safeSetText('pay-btn-amount', `₹${toPay}`);
+            renderCartItems();
+        }
+
+        function renderCartItems() {
+            const container = document.getElementById('cart-items-list');
+            if (!container) return;
+            container.innerHTML = Object.entries(cart.items).map(([name, item]) => `
+                <div class="flex justify-between items-center mb-4 last:mb-0">
+                    <div class="flex items-center gap-3">
+                        ${item.veg ? '<div class="border border-green-500 p-0.5 rounded w-3 h-3 flex items-center justify-center"><div class="w-1.5 h-1.5 bg-green-500 rounded-full"></div></div>' : '<div class="border border-red-500 p-0.5 rounded w-3 h-3 flex items-center justify-center"><div class="w-1.5 h-1.5 bg-red-500 rounded-full"></div></div>'}
+                        <div>
+                            <p class="text-sm font-bold text-gray-800 dark:text-gray-200">${name}</p>
+                            <p class="text-xs text-gray-500">₹${item.price}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="bg-gray-100 dark:bg-white/10 rounded-lg px-2 py-1 flex items-center gap-3 text-xs font-bold">
+                            <button onclick="updateQty('${name}', -1, ${cart.restaurantId}, ${item.price}, ${item.veg})">-</button>
+                            <span>${item.qty}</span>
+                            <button onclick="updateQty('${name}', 1, ${cart.restaurantId}, ${item.price}, ${item.veg})">+</button>
+                        </div>
+                        <div class="text-sm font-bold w-12 text-right">₹${item.price * item.qty}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ================= MODALS & PLACEMENT =================
+        function openCartModal() {
+            if (Object.keys(cart.items).length === 0) return;
+            if (cartModal) cartModal.classList.remove('hidden');
+            setTimeout(() => {
+                if (cartBackdrop) cartBackdrop.classList.remove('opacity-0');
+                if (cartPanel) cartPanel.classList.remove('translate-y-full', 'md:translate-x-full');
+            }, 10);
+            calculateBill();
+        }
+
+        function closeCartModal() {
+            if (cartBackdrop) cartBackdrop.classList.add('opacity-0');
+            if (cartPanel) cartPanel.classList.add('translate-y-full', 'md:translate-x-full');
+            setTimeout(() => {
+                if (cartModal) cartModal.classList.add('hidden');
+            }, 500);
+        }
+
+        function toggleCoupons() {
+            const sheet = document.getElementById('coupon-sheet');
+            const backdrop = document.getElementById('coupon-backdrop');
+            const panel = document.getElementById('coupon-panel');
+            if (sheet && sheet.classList.contains('hidden')) {
+                renderCoupons();
+                sheet.classList.remove('hidden');
+                setTimeout(() => {
+                    if (backdrop) backdrop.classList.remove('opacity-0');
+                    if (panel) panel.classList.remove('translate-y-full');
+                }, 10);
+            } else {
+                if (backdrop) backdrop.classList.add('opacity-0');
+                if (panel) panel.classList.add('translate-y-full');
+                setTimeout(() => {
+                    if (sheet) sheet.classList.add('hidden');
+                }, 500);
+            }
+        }
+
+        function renderCoupons() {
+            const list = document.getElementById('coupons-list');
+            if (!list) return;
+            const total = Object.values(cart.items).reduce((a, b) => a + (b.price * b.qty), 0);
+            const currentRest = restaurants.find(r => r.id === cart.restaurantId);
+            list.innerHTML = coupons.map(c => {
+                let isValid = total >= c.min;
+                if (c.code === 'TRYNEW50') {
+                    const joinDate = new Date(currentRest.joinDate);
+                    const isNew = joinDate >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                    if(!isNew) isValid = false;
+                }
+                return `
+                <div onclick="${isValid ? `applyCoupon('${c.code}')` : ''}" class="group border ${isValid ? 'border-gray-200 dark:border-white/10 hover:border-zomato-red cursor-pointer' : 'border-gray-100 dark:border-white/5 opacity-50 cursor-not-allowed'} rounded-2xl p-4 relative transition-all bg-gray-50 dark:bg-white/5">
+                    <div class="flex justify-between items-start">
+                        <div class="w-3/4">
+                            <div class="bg-white dark:bg-white/10 text-black dark:text-white text-xs font-black px-3 py-1 rounded border border-dashed border-gray-300 dark:border-gray-600 inline-block mb-2 tracking-widest">${c.code}</div>
+                            <h4 class="font-bold text-sm mb-1">${c.title}</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">${c.desc}</p>
+                        </div>
+                        ${isValid ? '<span class="text-zomato-red font-bold text-xs group-hover:scale-110 transition-transform">APPLY</span>' : ''}
+                    </div>
+                    <div class="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white dark:bg-[#18181b] rounded-full"></div>
+                    <div class="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white dark:bg-[#18181b] rounded-full"></div>
+                </div>`;
+            }).join('');
+        }
+
+        function applyCoupon(code) {
+            const coupon = coupons.find(c => c.code === code);
+            cart.coupon = coupon;
+            calculateBill();
+            toggleCoupons();
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.7 }, colors: ['#E23744', '#FFD700'] });
+            showToast(`Coupon '${code}' Applied!`);
+        }
+
+        function placeOrder() {
+            if (Object.keys(cart.items).length === 0) {
+                showToast("Your cart is empty!");
+                return;
+            }
+            const btn = document.querySelector('#cart-footer button');
+            if (!btn) return;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<div class="flex items-center justify-center w-full gap-2"><i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i> Processing...</div>`;
+            lucide.createIcons();
+            btn.disabled = true;
+
+            setTimeout(() => {
+                closeCartModal();
+                cart = { restaurantId: null, items: {}, coupon: null };
+                refreshUI();
+                const popup = document.getElementById('unlock-popup');
+                if (popup) {
+                    const title = popup.querySelector('h2');
+                    const subtitle = popup.querySelector('p.font-bold'); 
+                    const codeBox = popup.querySelector('div.bg-black\\/10'); 
+                    const bottomText = popup.querySelector('p.text-\\[10px\\]');
+                    if(title) title.innerText = "ORDER PLACED!";
+                    if(subtitle) subtitle.innerText = "Kitchen is preparing your food";
+                    if(codeBox) {
+                        codeBox.innerText = `ETA: ${Math.floor(Math.random() * 15) + 25} MINS`;
+                        codeBox.classList.remove('select-all'); 
+                    }
+                    if(bottomText) bottomText.innerText = "Track live on map";
+                    popup.classList.remove('hidden');
+                    const duration = 3000;
+                    const end = Date.now() + duration;
+                    (function frame() {
+                        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#E23744', '#FFD700'] });
+                        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#E23744', '#FFD700'] });
+                        if (Date.now() < end) requestAnimationFrame(frame);
+                    }());
+                    setTimeout(() => {
+                        popup.classList.add('hidden');
+                        btn.innerHTML = originalContent;
+                        btn.disabled = false;
+                        lucide.createIcons();
+                    }, 4000);
+                } else {
+                    showToast("Order Placed Successfully!");
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                }
+            }, 1500);
+        }
+
+        function openReviewModal() {
+            const modal = document.getElementById('review-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeReviewModal() {
+            const modal = document.getElementById('review-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function submitReview(stars) {
+            closeReviewModal();
+            const gpsVerified = true; 
+            if(gpsVerified && stars >= 4) {
+                confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }, colors: ['#FFD700', '#E23744'] });
+                const popup = document.getElementById('unlock-popup');
+                if (popup) {
+                    const title = popup.querySelector('h2');
+                    const subtitle = popup.querySelector('p.font-bold'); 
+                    const codeBox = popup.querySelector('div.bg-black\\/10'); 
+                    const bottomText = popup.querySelector('p.text-\\[10px\\]');
+                    
+                    // Reset texts for Review Unlock
+                    if(title) title.innerText = "UNLOCKED!";
+                    if(subtitle) subtitle.innerText = "Second Serving Coupon";
+                    if(codeBox) {
+                        codeBox.innerText = "MYSTERY40";
+                        codeBox.classList.add('select-all');
+                    }
+                    if(bottomText) bottomText.innerText = "40% OFF NEXT ORDER";
+
+                    popup.classList.remove('hidden');
+                    showToast(`Review Verified! Coupon Unlocked!`);
+                    setTimeout(() => popup.classList.add('hidden'), 5000);
+                }
+            } else {
+                showToast("Thanks for your review!");
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            const tm = document.getElementById('toast-message');
+            if (t && tm) {
+                tm.innerText = msg;
+                t.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
+            }
+        }
+
+        // Scroll Logic & Parallax
+        const navbar = document.getElementById('navbar');
+        const navSearch = document.getElementById('nav-search');
+        const heroBg = document.getElementById('hero-bg');
+        
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            if (heroBg) heroBg.style.transform = `scale(1.1) translateY(${scrolled * 0.4}px)`;
+
+            if (window.scrollY > 300) {
+                if (navbar) {
+                    navbar.classList.add('bg-white/80', 'dark:bg-[#0f0f0f]/80', 'backdrop-blur-md', 'shadow-lg');
+                    navbar.classList.remove('border-transparent');
+                    navbar.classList.add('border-gray-200', 'dark:border-white/5');
+                }
+                if (navSearch) navSearch.classList.remove('opacity-0', 'translate-y-[-10px]');
+            } else {
+                if (navbar) {
+                    navbar.classList.remove('bg-white/80', 'dark:bg-[#0f0f0f]/80', 'backdrop-blur-md', 'shadow-lg');
+                    navbar.classList.add('border-transparent');
+                    navbar.classList.remove('border-gray-200', 'dark:border-white/5');
+                }
+                if (navSearch) navSearch.classList.add('opacity-0', 'translate-y-[-10px]');
+            }
+        });
+
+        const rightScroll = document.getElementById('scroll-right');
+        const leftScroll = document.getElementById('scroll-left');
+        if (rightScroll) rightScroll.addEventListener('click', () => risingStarsContainer.scrollBy({ left: 350, behavior: 'smooth' }));
+        if (leftScroll) leftScroll.addEventListener('click', () => risingStarsContainer.scrollBy({ left: -350, behavior: 'smooth' }));
+        
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => document.documentElement.classList.toggle('dark'));
+        }
+
+        // Init
+        window.addEventListener('DOMContentLoaded', () => {
+            render();
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
