@@ -101,13 +101,6 @@
         ::-webkit-scrollbar-thumb:hover { background: #E23744; }
         .hide-scroll::-webkit-scrollbar { display: none; }
         
-        /* Typing Cursor */
-        .typing-cursor::after {
-            content: '|';
-            animation: blink 1s step-start infinite;
-        }
-        @keyframes blink { 50% { opacity: 0; } }
-
         /* Image Loader */
         .img-loading { filter: blur(10px); transform: scale(1.05); }
         .img-loaded { filter: blur(0); transform: scale(1); transition: all 0.5s ease-out; }
@@ -218,21 +211,21 @@
     </nav>
 
     <!-- Hero Section -->
-    <header class="relative h-[55vh] lg:h-[65vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+    <header class="relative h-[55vh] lg:h-[65vh] flex flex-col items-center justify-center text-center px-4 overflow-visible z-40">
         <!-- Parallax Background -->
-        <div class="absolute inset-0 z-0">
+        <div class="absolute inset-0 z-0 overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-gray-50 dark:to-zomato-dark z-10"></div>
             <img src="https://b.zmtcdn.com/web_assets/81f3ff974d82520780078ba1cfbd453a1583259680.png" class="w-full h-full object-cover object-center transform scale-110" style="will-change: transform;" id="hero-bg" alt="Hero Background">
         </div>
 
-        <div class="z-20 w-full max-w-4xl animate-slide-up-spring">
+        <div class="z-20 w-full max-w-4xl animate-slide-up-spring relative">
             <img src="https://b.zmtcdn.com/web_assets/8313a97515fcb0447d2d77c276532a511583262271.png" alt="Zomato" class="h-14 md:h-20 mx-auto mb-6 drop-shadow-2xl filter brightness-110">
             <h1 class="text-3xl md:text-6xl font-extrabold text-white mb-8 drop-shadow-lg tracking-tight">
-                Find the best food in <span class="typing-cursor text-zomato-red">Bengaluru</span>
+                Find the best food in <span class="text-zomato-red">Bengaluru</span>
             </h1>
             
             <!-- Search Bar Complex -->
-            <div class="bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-center p-2 overflow-hidden transform hover:scale-[1.01] transition-transform duration-300">
+            <div class="bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-center p-2 overflow-visible transform hover:scale-[1.01] transition-transform duration-300 relative z-50">
                 <div class="w-full md:w-1/3 flex items-center px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200 relative group">
                     <i data-lucide="map-pin" class="text-zomato-red w-6 h-6 flex-shrink-0 group-hover:animate-bounce"></i>
                     <input type="text" value="Bengaluru" class="w-full ml-3 text-gray-700 focus:outline-none font-medium bg-transparent" placeholder="Location">
@@ -240,7 +233,12 @@
                 </div>
                 <div class="w-full md:w-2/3 flex items-center px-4 py-3 relative">
                     <i data-lucide="search" class="text-gray-400 w-6 h-6 flex-shrink-0"></i>
-                    <input id="main-search" type="text" class="w-full ml-3 text-gray-700 focus:outline-none bg-transparent text-lg" placeholder="Search for 'Biryani', 'Pizza'...">
+                    <input id="main-search" type="text" class="w-full ml-3 text-gray-700 focus:outline-none bg-transparent text-lg" placeholder="Search for 'Biryani', 'Pizza'..." autocomplete="off">
+                    
+                    <!-- SEARCH SUGGESTIONS CONTAINER -->
+                    <div id="search-suggestions" class="absolute top-full left-0 w-full bg-white dark:bg-[#18181b] rounded-xl shadow-2xl border border-gray-100 dark:border-white/10 mt-4 hidden overflow-hidden text-left animate-slide-up-spring">
+                        <!-- Content Injected JS -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -292,7 +290,7 @@
                             </span>
                         </div>
                         <h2 id="dynamic-header" class="text-3xl md:text-5xl font-black tracking-tight mb-4 text-gray-900 dark:text-white">
-                            Rising Stars
+                            New & Hidden Spots
                         </h2>
                         <div class="flex items-center gap-4 flex-wrap">
                             <div class="flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800/50">
@@ -445,6 +443,52 @@
         </div>
     </div>
 
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closePaymentModal()"></div>
+        <div class="relative bg-white dark:bg-[#18181b] w-full max-w-md p-8 rounded-3xl shadow-2xl transform scale-95 transition-all animate-slide-up-spring">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black dark:text-white">Select Payment Method</h2>
+                <button onclick="closePaymentModal()" class="p-2 bg-gray-100 dark:bg-white/10 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer hover:border-zomato-red transition" onclick="selectPayment('cod')">
+                    <i data-lucide="banknote" class="w-6 h-6 text-green-500"></i>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm">Cash on Delivery</h4>
+                        <p class="text-xs text-gray-500">Pay cash at your doorstep</p>
+                    </div>
+                    <div class="w-4 h-4 rounded-full border border-gray-300" id="radio-cod"></div>
+                </div>
+                <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer hover:border-zomato-red transition" onclick="selectPayment('upi')">
+                    <i data-lucide="smartphone" class="w-6 h-6 text-blue-500"></i>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm">UPI</h4>
+                        <p class="text-xs text-gray-500">Google Pay, PhonePe, Paytm</p>
+                    </div>
+                    <div class="w-4 h-4 rounded-full border border-gray-300" id="radio-upi"></div>
+                </div>
+                <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer hover:border-zomato-red transition" onclick="selectPayment('card')">
+                    <i data-lucide="credit-card" class="w-6 h-6 text-purple-500"></i>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm">Credit / Debit Card</h4>
+                        <p class="text-xs text-gray-500">Visa, Mastercard, Rupay</p>
+                    </div>
+                    <div class="w-4 h-4 rounded-full border border-gray-300" id="radio-card"></div>
+                </div>
+                <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer hover:border-zomato-red transition" onclick="selectPayment('later')">
+                    <i data-lucide="clock" class="w-6 h-6 text-zomato-gold"></i>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm">Zomato PayLater</h4>
+                        <p class="text-xs text-gray-500">Pay next month</p>
+                    </div>
+                    <div class="w-4 h-4 rounded-full border border-gray-300" id="radio-later"></div>
+                </div>
+            </div>
+            <button onclick="confirmPayment()" class="w-full bg-zomato-red text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/30 hover:bg-red-600 transition mt-6">Pay & Order</button>
+        </div>
+    </div>
+
     <!-- Login/Signup Modal -->
     <div id="login-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeLoginModal()"></div>
@@ -557,7 +601,7 @@
 
             <!-- Bottom Place Order -->
             <div id="cart-footer" class="p-6 bg-white dark:bg-[#18181b] border-t border-gray-200 dark:border-white/5">
-                <button onclick="placeOrder()" class="w-full bg-gradient-to-r from-zomato-red to-red-600 text-white font-bold py-4 rounded-2xl shadow-xl shadow-red-500/30 text-lg flex justify-between px-8 items-center transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden">
+                <button onclick="openPaymentModal()" class="w-full bg-gradient-to-r from-zomato-red to-red-600 text-white font-bold py-4 rounded-2xl shadow-xl shadow-red-500/30 text-lg flex justify-between px-8 items-center transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden">
                     <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                     <div class="flex flex-col text-left relative z-10">
                         <span id="pay-btn-amount" class="font-mono">₹0</span>
@@ -653,6 +697,36 @@
             tags: ['Asian', 'Healthy', 'Modern Indian', 'Burger'], 
             minRating: 4.0
         };
+
+        // Search Data
+        const searchData = [
+            // Cuisines
+            { type: 'Cuisine', name: 'Asian' },
+            { type: 'Cuisine', name: 'Healthy' },
+            { type: 'Cuisine', name: 'Modern Indian' },
+            { type: 'Cuisine', name: 'North Indian' },
+            { type: 'Cuisine', name: 'Burger' },
+            { type: 'Cuisine', name: 'Biryani' },
+            // Dishes
+            { type: 'Dish', name: 'Tonkotsu Ramen' },
+            { type: 'Dish', name: 'Spicy Miso Ramen' },
+            { type: 'Dish', name: 'Gyoza' },
+            { type: 'Dish', name: 'Dragon Noodles' },
+            { type: 'Dish', name: 'Kung Pao Chicken' },
+            { type: 'Dish', name: 'Spring Rolls' },
+            { type: 'Dish', name: 'Avocado Toast' },
+            { type: 'Dish', name: 'Quinoa Salad' },
+            { type: 'Dish', name: 'Chicken Biryani' },
+            { type: 'Dish', name: 'Paneer Butter Masala' },
+            // Restaurants
+            { type: 'Restaurant', name: 'Neon Ramen' },
+            { type: 'Restaurant', name: 'Wok & Roll' },
+            { type: 'Restaurant', name: 'The Green Bowl' },
+            { type: 'Restaurant', name: 'Spice Labs' },
+            { type: 'Restaurant', name: 'Meghana Foods' },
+            { type: 'Restaurant', name: 'Truffles' },
+            { type: 'Restaurant', name: 'Empire' }
+        ];
 
         // Taster Deals Data
         const tasterDeals = [
@@ -781,6 +855,7 @@
         let cart = { restaurantId: null, items: {}, coupon: null };
         let isLoggedIn = false;
         let selectedMembership = null;
+        let selectedPaymentMethod = null;
 
         // ================= MEMBERSHIP & AUTH LOGIC =================
         function openSignupFlow() {
@@ -1121,15 +1196,57 @@
         }
 
         const searchInput = document.getElementById('main-search');
+        const suggestionsBox = document.getElementById('search-suggestions');
+
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase();
-                if(term.length > 2) {
-                     const grid = document.getElementById('restaurants-grid');
-                     if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (term.length < 2) {
+                    if(suggestionsBox) suggestionsBox.classList.add('hidden');
+                    return;
+                }
+
+                const matches = searchData.filter(item => item.name.toLowerCase().includes(term)).slice(0, 5);
+
+                if (matches.length > 0 && suggestionsBox) {
+                    suggestionsBox.innerHTML = matches.map(item => `
+                        <div class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer flex items-center gap-3 border-b border-gray-100 dark:border-white/5 last:border-0 transition-colors" onclick="selectSuggestion('${item.name}')">
+                            <div class="bg-gray-100 dark:bg-white/10 p-2 rounded-full">
+                                <i data-lucide="${getIconForType(item.type)}" class="w-4 h-4 text-gray-500"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-gray-800 dark:text-gray-200">${item.name}</p>
+                                <p class="text-[10px] text-gray-400 uppercase tracking-wider">${item.type}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                    suggestionsBox.classList.remove('hidden');
+                    lucide.createIcons();
+                } else {
+                    if(suggestionsBox) suggestionsBox.classList.add('hidden');
                 }
             });
         }
+
+        function getIconForType(type) {
+            if (type === 'Restaurant') return 'store';
+            if (type === 'Cuisine') return 'utensils';
+            return 'search'; 
+        }
+
+        function selectSuggestion(name) {
+            if(searchInput) searchInput.value = name;
+            if(suggestionsBox) suggestionsBox.classList.add('hidden');
+            const grid = document.getElementById('restaurants-grid');
+            if(grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Hide suggestions on click outside
+        document.addEventListener('click', (e) => {
+            if (searchInput && suggestionsBox && !searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+                suggestionsBox.classList.add('hidden');
+            }
+        });
 
         // ================= FIRST BITE LOGIC =================
         function claimTasterDeal(dealId) {
@@ -1382,6 +1499,95 @@
             `).join('');
         }
 
+        // ================= PAYMENT MODAL =================
+        function openPaymentModal() {
+            if (Object.keys(cart.items).length === 0) {
+                showToast("Your cart is empty!");
+                return;
+            }
+            document.getElementById('payment-modal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('payment-modal').classList.add('hidden');
+            selectedPaymentMethod = null;
+            resetPaymentSelection();
+        }
+
+        function selectPayment(method) {
+            selectedPaymentMethod = method;
+            resetPaymentSelection();
+            const radio = document.getElementById(`radio-${method}`);
+            if(radio) {
+                radio.classList.remove('border-gray-300');
+                radio.classList.add('bg-zomato-red', 'border-zomato-red');
+            }
+        }
+
+        function resetPaymentSelection() {
+            const radios = document.querySelectorAll('[id^="radio-"]');
+            radios.forEach(r => {
+                r.classList.remove('bg-zomato-red', 'border-zomato-red');
+                r.classList.add('border-gray-300');
+            });
+        }
+
+        function confirmPayment() {
+            if(!selectedPaymentMethod) {
+                showToast("Please select a payment method");
+                return;
+            }
+            closePaymentModal();
+            placeOrder();
+        }
+
+        function placeOrder() {
+            const btn = document.querySelector('#cart-footer button');
+            if (!btn) return;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<div class="flex items-center justify-center w-full gap-2"><i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i> Processing...</div>`;
+            lucide.createIcons();
+            btn.disabled = true;
+
+            setTimeout(() => {
+                closeCartModal();
+                cart = { restaurantId: null, items: {}, coupon: null };
+                refreshUI();
+                const popup = document.getElementById('unlock-popup');
+                if (popup) {
+                    const title = popup.querySelector('h2');
+                    const subtitle = popup.querySelector('p.font-bold'); 
+                    const codeBox = popup.querySelector('div.bg-black\\/10'); 
+                    const bottomText = popup.querySelector('p.text-\\[10px\\]');
+                    if(title) title.innerText = "ORDER PLACED!";
+                    if(subtitle) subtitle.innerText = "Kitchen is preparing your food";
+                    if(codeBox) {
+                        codeBox.innerText = `ETA: ${Math.floor(Math.random() * 15) + 25} MINS`;
+                        codeBox.classList.remove('select-all'); 
+                    }
+                    if(bottomText) bottomText.innerText = "Track live on map";
+                    popup.classList.remove('hidden');
+                    const duration = 3000;
+                    const end = Date.now() + duration;
+                    (function frame() {
+                        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#E23744', '#FFD700'] });
+                        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#E23744', '#FFD700'] });
+                        if (Date.now() < end) requestAnimationFrame(frame);
+                    }());
+                    setTimeout(() => {
+                        popup.classList.add('hidden');
+                        btn.innerHTML = originalContent;
+                        btn.disabled = false;
+                        lucide.createIcons();
+                    }, 4000);
+                } else {
+                    showToast("Order Placed Successfully!");
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                }
+            }, 1500);
+        }
+
         // ================= MODALS & PLACEMENT =================
         function openCartModal() {
             if (Object.keys(cart.items).length === 0) return;
@@ -1456,57 +1662,6 @@
             toggleCoupons();
             confetti({ particleCount: 150, spread: 80, origin: { y: 0.7 }, colors: ['#E23744', '#FFD700'] });
             showToast(`Coupon '${code}' Applied!`);
-        }
-
-        function placeOrder() {
-            if (Object.keys(cart.items).length === 0) {
-                showToast("Your cart is empty!");
-                return;
-            }
-            const btn = document.querySelector('#cart-footer button');
-            if (!btn) return;
-            const originalContent = btn.innerHTML;
-            btn.innerHTML = `<div class="flex items-center justify-center w-full gap-2"><i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i> Processing...</div>`;
-            lucide.createIcons();
-            btn.disabled = true;
-
-            setTimeout(() => {
-                closeCartModal();
-                cart = { restaurantId: null, items: {}, coupon: null };
-                refreshUI();
-                const popup = document.getElementById('unlock-popup');
-                if (popup) {
-                    const title = popup.querySelector('h2');
-                    const subtitle = popup.querySelector('p.font-bold'); 
-                    const codeBox = popup.querySelector('div.bg-black\\/10'); 
-                    const bottomText = popup.querySelector('p.text-\\[10px\\]');
-                    if(title) title.innerText = "ORDER PLACED!";
-                    if(subtitle) subtitle.innerText = "Kitchen is preparing your food";
-                    if(codeBox) {
-                        codeBox.innerText = `ETA: ${Math.floor(Math.random() * 15) + 25} MINS`;
-                        codeBox.classList.remove('select-all'); 
-                    }
-                    if(bottomText) bottomText.innerText = "Track live on map";
-                    popup.classList.remove('hidden');
-                    const duration = 3000;
-                    const end = Date.now() + duration;
-                    (function frame() {
-                        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#E23744', '#FFD700'] });
-                        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#E23744', '#FFD700'] });
-                        if (Date.now() < end) requestAnimationFrame(frame);
-                    }());
-                    setTimeout(() => {
-                        popup.classList.add('hidden');
-                        btn.innerHTML = originalContent;
-                        btn.disabled = false;
-                        lucide.createIcons();
-                    }, 4000);
-                } else {
-                    showToast("Order Placed Successfully!");
-                    btn.innerHTML = originalContent;
-                    btn.disabled = false;
-                }
-            }, 1500);
         }
 
         function openReviewModal() {
